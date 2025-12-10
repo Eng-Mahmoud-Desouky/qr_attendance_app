@@ -1,0 +1,282 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Smart Attendance - Student Mini Spec",
+    "version": "1.0.0",
+    "description": "Subset of the API needed by the Student Mobile App (Flutter). Based on eMTS Smart Attendance System API."
+  },
+  "servers": [
+    {
+      "url": "https://smart-attendance-system-production-253e.up.railway.app"
+    },
+    {
+      "url": "http://localhost:8083"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "Enter JWT token (without 'Bearer ' prefix)",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "user123"
+          },
+          "password": {
+            "type": "string",
+            "example": "password"
+          }
+        }
+      },
+      "ResponseAcademicMember": {
+        "type": "object",
+        "properties": {
+          "academicMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "universityNumber": {
+            "type": "string"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "universityId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RequestAttendance": {
+        "type": "object",
+        "required": [
+          "deviceId",
+          "ipAddress",
+          "lectureId",
+          "qrCodeId",
+          "studentAcademicMemberId"
+        ],
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 5
+          },
+          "ipAddress": {
+            "type": "string"
+          },
+          "lectureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "qrCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentAcademicMemberId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RequestQrGenerator": {
+        "type": "object",
+        "required": [
+          "qrCodeId",
+          "uuidTokenHash"
+        ],
+        "properties": {
+          "qrCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uuidTokenHash": {
+            "type": "string",
+            "minLength": 5
+          }
+        }
+      },
+      "MarkPresentRequest": {
+        "type": "object",
+        "properties": {
+          "requestAttendance": {
+            "$ref": "#/components/schemas/RequestAttendance"
+          },
+          "requestQrGenerator": {
+            "$ref": "#/components/schemas/RequestQrGenerator"
+          }
+        }
+      },
+      "ResponseAttendance": {
+        "type": "object",
+        "properties": {
+          "attendanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "checkInTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "lectureId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "studentAcademicMemberId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Student login",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/member/me": {
+      "get": {
+        "summary": "Get current logged-in user profile",
+        "operationId": "getCurrentUser",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseAcademicMember"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attendance/mark-present": {
+      "put": {
+        "summary": "Mark presence (Check-in)",
+        "operationId": "markPresent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkPresentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attendance/find-student-history": {
+      "get": {
+        "summary": "Get attendance history for a student",
+        "operationId": "findStudentAttendanceHistory",
+        "parameters": [
+          {
+            "name": "studentId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResponseAttendance"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
