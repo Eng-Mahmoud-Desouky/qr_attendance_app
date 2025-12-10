@@ -13,7 +13,7 @@ class StudentModel extends Student {
     if (json['firstName'] != null || json['lastName'] != null) {
       name = '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'.trim();
     } else {
-      name = json['name'] ?? 'Unknown';
+      name = json['name'] ?? json['username'] ?? 'Unknown';
     }
 
     return StudentModel(

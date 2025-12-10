@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 abstract class AuthLocalDataSource {
-  Future<void> saveTokens(String accessToken, String refreshToken);
+  Future<void> saveTokens(String accessToken, String? refreshToken);
   Future<String?> getAccessToken();
   Future<void> clearTokens();
 }
@@ -15,9 +15,11 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   static const _refreshTokenKey = 'REFRESH_TOKEN';
 
   @override
-  Future<void> saveTokens(String accessToken, String refreshToken) async {
+  Future<void> saveTokens(String accessToken, String? refreshToken) async {
     await storage.write(key: _accessTokenKey, value: accessToken);
-    await storage.write(key: _refreshTokenKey, value: refreshToken);
+    if (refreshToken != null) {
+      await storage.write(key: _refreshTokenKey, value: refreshToken);
+    }
   }
 
   @override
