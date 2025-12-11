@@ -21,9 +21,29 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   void _loadHistory() {
+    print('');
+    print('═══════════════════════════════════════════════════');
+    print('📱 [HISTORY SCREEN] Loading History');
+    print('═══════════════════════════════════════════════════');
+
     final authState = context.read<AuthCubit>().state;
+    print('🔍 Auth State: ${authState.runtimeType}');
+
     if (authState is AuthAuthenticated) {
+      print('✅ User is authenticated');
+      print('   ├─ Student ID: ${authState.student.id}');
+      print('   ├─ Student Name: ${authState.student.name}');
+      print('   └─ Student Email: ${authState.student.email}');
+      print('═══════════════════════════════════════════════════');
+      print('🚀 Calling loadHistory with student ID: ${authState.student.id}');
+      print('');
+
       context.read<AttendanceHistoryCubit>().loadHistory(authState.student.id);
+    } else {
+      print('❌ User is NOT authenticated');
+      print('   └─ Auth State: ${authState.runtimeType}');
+      print('═══════════════════════════════════════════════════');
+      print('');
     }
   }
 
@@ -50,8 +70,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   final record = records[index];
                   return ListTile(
                     title: Text(record.lectureTitle),
-                    subtitle:
-                        Text(DateFormat.yMMMd().add_jm().format(record.date)),
+                    subtitle: Text(
+                      DateFormat.yMMMd().add_jm().format(record.date),
+                    ),
                     trailing: Text(
                       record.status,
                       style: TextStyle(

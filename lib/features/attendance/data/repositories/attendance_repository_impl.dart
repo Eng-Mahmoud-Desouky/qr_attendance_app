@@ -11,11 +11,19 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   AttendanceRepositoryImpl({required this.remoteDataSource});
 
   @override
-  Future<Either<Failure, void>> markAttendance(String lectureId,
-      String studentId, String qrCode, DateTime timestamp) async {
+  Future<Either<Failure, void>> markAttendance(
+    String lectureId,
+    String studentId,
+    String qrCode,
+    DateTime timestamp,
+  ) async {
     try {
       await remoteDataSource.markAttendance(
-          lectureId, studentId, qrCode, timestamp);
+        lectureId,
+        studentId,
+        qrCode,
+        timestamp,
+      );
       return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -25,11 +33,37 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   }
 
   @override
-  Future<Either<Failure, List<AttendanceRecord>>> getAttendanceHistory(
-      String studentId, int limit, int offset) async {
+  Future<Either<Failure, bool>> developMarkPresence(
+    String lectureId,
+    String studentId,
+    String qrCodeId,
+  ) async {
     try {
-      final records =
-          await remoteDataSource.getHistory(studentId, limit, offset);
+      final result = await remoteDataSource.developMarkPresence(
+        lectureId,
+        studentId,
+        qrCodeId,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<AttendanceRecord>>> getAttendanceHistory(
+    String studentId,
+    int limit,
+    int offset,
+  ) async {
+    try {
+      final records = await remoteDataSource.getHistory(
+        studentId,
+        limit,
+        offset,
+      );
       return Right(records);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

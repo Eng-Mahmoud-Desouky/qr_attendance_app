@@ -1,0 +1,204 @@
+{
+    "info": {
+        "title": "Instructor Web Dashboard API Contract",
+        "version": "1.0.0",
+        "baseUrl": "https://smart-attendance-system-production-253e.up.railway.app"
+    },
+    "authentication": {
+        "type": "Bearer",
+        "endpoints": {
+            "login": {
+                "method": "POST",
+                "path": "/api/v1/auth/login",
+                "request": {
+                    "schema": "LoginRequest",
+                    "example": {
+                        "username": "instructor1",
+                        "password": "password123"
+                    }
+                },
+                "response": {
+                    "success": {
+                        "token": "JWT_TOKEN_STRING"
+                    },
+                    "error": {
+                        "401": "Unauthorized"
+                    }
+                }
+            },
+            "checkStatus": {
+                "method": "GET",
+                "path": "/api/v1/auth/check"
+            }
+        }
+    },
+    "features": {
+        "instructorProfile": {
+            "endpoints": {
+                "getProfile": {
+                    "method": "GET",
+                    "path": "/api/v1/member/me",
+                    "response": {
+                        "schema": "ResponseAcademicMember"
+                    }
+                }
+            }
+        },
+        "courseManagement": {
+            "endpoints": {
+                "getMyCourses": {
+                    "method": "GET",
+                    "path": "/api/v1/course/search-instructor",
+                    "queryParameters": {
+                        "instructor": "UUID (optional if inferred from token, but spec asks for it. Check if 'me' handles it. Spec says 'instructor' param required.)"
+                    },
+                    "response": {
+                        "schema": "List<ResponseCourse>"
+                    }
+                }
+            }
+        },
+        "lectureManagement": {
+            "endpoints": {
+                "createLecture": {
+                    "method": "POST",
+                    "path": "/api/v1/lecture/add",
+                    "request": {
+                        "schema": "RequestLecture"
+                    }
+                },
+                "getLecturesByCourse": {
+                    "method": "GET",
+                    "path": "/api/v1/lecture/find-by-course-and-instructor",
+                    "queryParameters": {
+                        "courseId": "UUID",
+                        "instructorAcademicMemberId": "UUID"
+                    }
+                },
+                "deleteLecture": {
+                    "method": "DELETE",
+                    "path": "/api/v1/lecture/delete",
+                    "queryParameters": {
+                        "lectureId": "UUID"
+                    }
+                }
+            }
+        },
+        "qrCode": {
+            "endpoints": {
+                "generate": {
+                    "method": "POST",
+                    "path": "/api/v1/qr-code/generate",
+                    "request": {
+                        "schema": "RequestQrCode",
+                        "example": {
+                            "lectureId": "UUID",
+                            "durationSeconds": 600,
+                            "networkInfo": "Wifi-SSID"
+                        }
+                    },
+                    "response": {
+                        "schema": "ResponseQrCode"
+                    }
+                },
+                "getActiveByLecture": {
+                    "method": "GET",
+                    "path": "/api/v1/qr-code/find-by-lecture",
+                    "queryParameters": {
+                        "lectureId": "UUID"
+                    }
+                }
+            }
+        },
+        "attendance": {
+            "endpoints": {
+                "getStatistics": {
+                    "method": "GET",
+                    "path": "/api/v1/attendance/get-statistics",
+                    "queryParameters": {
+                        "lectureId": "UUID"
+                    },
+                    "response": {
+                        "schema": "AttendanceStatisticsResponse"
+                    }
+                },
+                "markPresent": {
+                    "method": "PUT",
+                    "path": "/api/v1/attendance/mark-as-present",
+                    "queryParameters": {
+                        "studentId": "UUID",
+                        "lectureId": "UUID"
+                    }
+                },
+                "markAbsent": {
+                    "method": "PUT",
+                    "path": "/api/v1/attendance/mark-as-absent",
+                    "queryParameters": {
+                        "studentId": "UUID",
+                        "lectureId": "UUID"
+                    }
+                },
+                "getPresentStudents": {
+                    "method": "GET",
+                    "path": "/api/v1/attendance/find-present-in-lecture",
+                    "queryParameters": {
+                        "lectureId": "UUID"
+                    }
+                },
+                "getAbsentStudents": {
+                    "method": "GET",
+                    "path": "/api/v1/attendance/find-absent-in-lecture",
+                    "queryParameters": {
+                        "lectureId": "UUID"
+                    }
+                }
+            }
+        }
+    },
+    "schemas": {
+        "LoginRequest": {
+            "username": "string",
+            "password": "string"
+        },
+        "ResponseAcademicMember": {
+            "academicMemberId": "UUID",
+            "firstName": "string",
+            "lastName": "string",
+            "roleId": "UUID",
+            "universityId": "UUID"
+        },
+        "ResponseCourse": {
+            "courseId": "UUID",
+            "code": "string",
+            "name": "string",
+            "description": "string"
+        },
+        "RequestLecture": {
+            "courseId": "UUID",
+            "instructorAcademicMemberId": "UUID",
+            "lectureDate": "date (YYYY-MM-DD)",
+            "startTime": {
+                "hour": "int",
+                "minute": "int"
+            },
+            "endTime": {
+                "hour": "int",
+                "minute": "int"
+            },
+            "room": "string",
+            "dayOfWeek": "enum(MONDAY...)"
+        },
+        "ResponseQrCode": {
+            "qrCodeId": "UUID",
+            "uuidTokenHash": "string",
+            "expiresAt": "datetime",
+            "activated": "boolean"
+        },
+        "AttendanceStatisticsResponse": {
+            "lectureId": "UUID",
+            "total": "long",
+            "present": "long",
+            "absent": "long"
+        }
+    }
+}

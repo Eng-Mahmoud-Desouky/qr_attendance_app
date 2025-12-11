@@ -9,6 +9,21 @@ class StudentModel extends Student {
   });
 
   factory StudentModel.fromJson(Map<String, dynamic> json) {
+    print('');
+    print('═══════════════════════════════════════════════════');
+    print('🔄 [STUDENT MODEL] Parsing Student from JSON');
+    print('═══════════════════════════════════════════════════');
+    print('📦 Raw JSON Data:');
+    print(json);
+    print('───────────────────────────────────────────────────');
+    print('🔍 Checking ID fields:');
+    print('   ├─ userId: ${json['userId']}');
+    print('   ├─ academicMemberId: ${json['academicMemberId']}');
+    print('   ├─ studentAcademicMemberId: ${json['studentAcademicMemberId']}');
+    print('   ├─ studentId: ${json['studentId']}');
+    print('   └─ id: ${json['id']}');
+    print('───────────────────────────────────────────────────');
+
     String name = '';
     if (json['firstName'] != null || json['lastName'] != null) {
       name = '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'.trim();
@@ -16,8 +31,23 @@ class StudentModel extends Student {
       name = json['name'] ?? json['username'] ?? 'Unknown';
     }
 
+    final extractedId =
+        json['userId'] ??
+        json['academicMemberId'] ??
+        json['studentAcademicMemberId'] ??
+        json['studentId'] ??
+        json['id'] ??
+        '';
+
+    print('🎯 Extracted Values:');
+    print('   ├─ ID: $extractedId');
+    print('   ├─ Name: $name');
+    print('   └─ Email: ${json['email'] ?? ''}');
+    print('═══════════════════════════════════════════════════');
+    print('');
+
     return StudentModel(
-      id: json['academicMemberId'] ?? json['id'] ?? '',
+      id: extractedId,
       name: name,
       email: json['email'] ?? '',
       enrolledCourses:

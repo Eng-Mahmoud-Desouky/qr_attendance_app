@@ -4,6 +4,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../cubit/mark_attendance_cubit.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
+import 'dart:convert';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -13,113 +14,223 @@ class QrScannerScreen extends StatefulWidget {
 }
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
-  // MobileScannerController controller = MobileScannerController();
   bool isProcessing = false;
+  bool isDialogShown = false; // منع تكرار الـ Dialogs
+
+  @override
+  void dispose() {
+    // Reset the cubit state when leaving the screen
+    context.read<MarkAttendanceCubit>().reset();
+    super.dispose();
+  }
+
+  void _showLoadingDialog() {
+    if (isDialogShown) return; // منع تكرار الـ Dialog
+    isDialogShown = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => WillPopScope(
+        onWillPop: () async => false, // منع إغلاق الـ Dialog بالـ Back Button
+        child: const Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+
+  void _closeDialog() {
+    if (!isDialogShown) return;
+    isDialogShown = false;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _showSuccessDialog(String message) {
+    if (isDialogShown) _closeDialog(); // إغلاق أي dialog سابق
+    isDialogShown = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: const Text('✅ نجح'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _closeDialog();
+                // Reset state before going back
+                context.read<MarkAttendanceCubit>().reset();
+                Navigator.of(context).pop(); // Go back to Home
+              },
+              child: const Text('حسناً'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    if (isDialogShown) _closeDialog(); // إغلاق أي dialog سابق
+    isDialogShown = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          title: const Text('❌ خطأ'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _closeDialog();
+                // Reset state and allow scanning again
+                context.read<MarkAttendanceCubit>().reset();
+                setState(() => isProcessing = false);
+              },
+              child: const Text('حسناً'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan QR Code')),
+      appBar: AppBar(
+        title: const Text('مسح كود QR'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Reset state before going back
+            context.read<MarkAttendanceCubit>().reset();
+            Navigator.of(context).pop();
+          },
+        ),
+      ),
       body: BlocListener<MarkAttendanceCubit, MarkAttendanceState>(
         listener: (context, state) {
+          print('[QR SCANNER] State changed: ${state.runtimeType}');
+
           if (state is MarkAttendanceLoading) {
             setState(() => isProcessing = true);
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const Center(child: CircularProgressIndicator()),
-            );
+            _showLoadingDialog();
           } else if (state is MarkAttendanceSuccess) {
-            Navigator.of(context).pop(); // Close loader
-            showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text('Success'),
-                content: Text(state.message),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close alert
-                      Navigator.of(context).pop(); // Go back to Home
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
+            setState(
+              () => isProcessing = true,
+            ); // Keep processing true until user dismisses
+            _showSuccessDialog(state.message);
           } else if (state is MarkAttendanceFailure) {
-            Navigator.of(context).pop(); // Close loader
-            setState(() => isProcessing = false);
-            showDialog(
-              context: context,
-              builder: (_) => AlertDialog(
-                title: const Text('Error'),
-                content: Text(state.message),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Close alert
-                      // Resume scanning? MobileScanner automatically resumes usually?
-                      // We might need to implement re-enabling detection logic.
-                    },
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            );
+            setState(
+              () => isProcessing = true,
+            ); // Keep processing true until user dismisses
+            _showErrorDialog(state.message);
           }
         },
         child: MobileScanner(
           onDetect: (capture) {
-            if (isProcessing) return;
+            if (isProcessing) {
+              print('[QR SCANNER] Scan ignored - already processing');
+              return;
+            }
+
             final List<Barcode> barcodes = capture.barcodes;
             for (final barcode in barcodes) {
               if (barcode.rawValue != null) {
-                // Here we extract lectureId from QR or assume QR is lectureId
-                // The API says: `qrCode` in request body. `lectureId` is also required.
-                // Assuming QR contains payload that we send as `qrCode`.
-                // Wait, request requires `lectureId` AND `qrCode`.
-                // Does QR contain both? Or lectureId is derived?
-                // API Spec: "lectureId (parsed from QR or API response)"
-                // Let's assume QR string IS the payload containing everything or we parse it.
-                // For simplicity, let's assume QR contains a JSON or a string we can use.
-                // Actually the API Spec says: `/api/v1/attendance/mark-present` Body: `{ lectureId, studentId, qrCode ... }`
-                // But we need `studentId` from logged in user.
-                // We need to access Student ID. We can get it from Storage or AuthState?
-                // `AuthCubit` has `Student` in state but `MarkAttendanceCubit` does not.
-                // We should probably get studentId from a repository or session manager.
-                // For now, hardcode or fetch from storage if we had `UserSession`.
-                // I'll add a TODO or fetch from a singleton/storage in implementation.
+                // Prevent multiple scans immediately
+                setState(() => isProcessing = true);
 
-                final String code = barcode.rawValue!;
-                // Assuming QR contains "lectureId|secret"
-                // Or just send raw code as qrCode and lectureId is something else?
-                // The user prompt said: "lectureId (parsed from QR or API response)"
+                final String rawCode = barcode.rawValue!;
+                print('[QR SCANNER] QR code detected: $rawCode');
 
-                // Let's assume the QR is just a string, and we send it.
-                // But where do we get lectureId?
-                // Maybe the QR IS the lectureId?
-                // I'll assume parsing logic: "lectureId:qrCode" split by colon, or just passing dummy for now.
-                // I'll pass code as qrCode, and extract lectureId from it if possible.
-                // Let's assume content is "lecture_id_123,qr_token_abc"
+                try {
+                  final Map<String, dynamic> data = jsonDecode(rawCode);
 
-                // Also need studentId.
-                // Hack: Pass "stu_12345" for now, or read from `AuthCubt`.
-                // I can access AuthCubit via context.read<AuthCubit>().state... if it persists.
+                  print('═══════════════════════════════════════════════════');
+                  print('🔍 [QR SCANNER] QR Code Scanned Successfully!');
+                  print('═══════════════════════════════════════════════════');
+                  print('📦 Raw QR Code Content:');
+                  print(rawCode);
+                  print('───────────────────────────────────────────────────');
+                  print('📋 Parsed JSON Data:');
+                  print(data);
+                  print('═══════════════════════════════════════════════════');
 
-                final authState = context.read<AuthCubit>().state;
-                String studentId = 'unknown';
-                if (authState is AuthAuthenticated) {
-                  studentId = authState.student.id;
+                  // Validate required fields from QR code
+                  final String? qrCodeId = data['qrCodeId'];
+                  final String? uuidTokenHash = data['uuidTokenHash'];
+                  final String? lectureId = data['lectureId'];
+
+                  print('🔑 Extracted Fields from QR Code:');
+                  print('   ├─ qrCodeId: $qrCodeId');
+                  print('   ├─ uuidTokenHash: $uuidTokenHash');
+                  print('   └─ lectureId: $lectureId');
+                  print('───────────────────────────────────────────────────');
+
+                  if (qrCodeId == null || qrCodeId.isEmpty) {
+                    throw const FormatException('Missing qrCodeId in QR code');
+                  }
+
+                  if (uuidTokenHash == null || uuidTokenHash.isEmpty) {
+                    throw const FormatException(
+                      'Missing uuidTokenHash in QR code',
+                    );
+                  }
+
+                  if (lectureId == null || lectureId.isEmpty) {
+                    throw const FormatException('Missing lectureId in QR code');
+                  }
+
+                  print('✅ All required fields validated successfully!');
+                  print('═══════════════════════════════════════════════════');
+
+                  final authState = context.read<AuthCubit>().state;
+                  String studentId = '';
+                  if (authState is AuthAuthenticated) {
+                    studentId = authState.student.id;
+                  }
+
+                  print('');
+                  print('👤 Student Authentication:');
+                  if (studentId.isEmpty) {
+                    print('   └─ ❌ ERROR: Not authenticated!');
+                    print(
+                      '═══════════════════════════════════════════════════',
+                    );
+                    throw const FormatException(
+                      'Student ID not found. Please re-login.',
+                    );
+                  } else {
+                    print('   └─ ✅ Student ID: $studentId');
+                    print(
+                      '═══════════════════════════════════════════════════',
+                    );
+                  }
+
+                  print('🚀 Calling Develop Mark Presence API...');
+                  print('');
+
+                  context.read<MarkAttendanceCubit>().developMarkPresence(
+                    lectureId,
+                    studentId,
+                    qrCodeId,
+                  );
+                  break;
+                } catch (e) {
+                  print('[QR SCANNER] ERROR: $e');
+                  // Show error dialog directly without going through cubit
+                  _showErrorDialog(
+                    'كود QR غير صالح أو غير مدعوم.\n\nالخطأ: $e',
+                  );
                 }
-
-                context.read<MarkAttendanceCubit>().markAttendance(
-                  "lec_parsed_from_qr",
-                  studentId,
-                  code,
-                  DateTime.now(),
-                );
-                break;
               }
             }
           },

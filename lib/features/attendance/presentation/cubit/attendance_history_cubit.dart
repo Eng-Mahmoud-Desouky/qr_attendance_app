@@ -26,16 +26,43 @@ class AttendanceHistoryCubit extends Cubit<AttendanceHistoryState> {
   final GetAttendanceHistoryUseCase getHistoryUseCase;
 
   AttendanceHistoryCubit({required this.getHistoryUseCase})
-      : super(AttendanceHistoryInitial());
+    : super(AttendanceHistoryInitial());
 
-  Future<void> loadHistory(String studentId,
-      {int limit = 50, int offset = 0}) async {
+  Future<void> loadHistory(
+    String studentId, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    print('');
+    print('═══════════════════════════════════════════════════');
+    print('📋 [HISTORY CUBIT] Loading Attendance History');
+    print('═══════════════════════════════════════════════════');
+    print('🎯 Parameters:');
+    print('   ├─ Student ID: $studentId');
+    print('   ├─ Limit: $limit');
+    print('   └─ Offset: $offset');
+    print('═══════════════════════════════════════════════════');
+    print('');
+
     emit(AttendanceHistoryLoading());
     final result = await getHistoryUseCase(
-        GetHistoryParams(studentId, limit: limit, offset: offset));
+      GetHistoryParams(studentId, limit: limit, offset: offset),
+    );
     result.fold(
-      (failure) => emit(AttendanceHistoryFailure(failure.message)),
-      (records) => emit(AttendanceHistoryLoaded(records)),
+      (failure) {
+        print('');
+        print('❌ [HISTORY CUBIT] Failed to load history');
+        print('   └─ Error: ${failure.message}');
+        print('');
+        emit(AttendanceHistoryFailure(failure.message));
+      },
+      (records) {
+        print('');
+        print('✅ [HISTORY CUBIT] Successfully loaded history');
+        print('   └─ Records count: ${records.length}');
+        print('');
+        emit(AttendanceHistoryLoaded(records));
+      },
     );
   }
 }

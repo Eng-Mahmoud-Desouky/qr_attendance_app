@@ -22,10 +22,25 @@ class AuthRepositoryImpl implements AuthRepository {
   ) async {
     try {
       final loginResponse = await remoteDataSource.login(username, password);
+
+      // Save tokens
       await localDataSource.saveTokens(
         loginResponse.accessToken,
         loginResponse.refreshToken,
       );
+
+      // Save student data for persistence
+      final studentData = {
+        'id': loginResponse.student.id,
+        'name': loginResponse.student.name,
+        'email': loginResponse.student.email,
+        'enrolledCourses': loginResponse.student.enrolledCourses,
+      };
+      await localDataSource.saveStudentData(studentData);
+
+      print('[AUTH REPO] Successfully saved tokens and student data');
+      print('[AUTH REPO] Student ID: ${loginResponse.student.id}');
+
       return Right(loginResponse.student);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

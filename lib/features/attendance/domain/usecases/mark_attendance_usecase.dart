@@ -12,6 +12,9 @@ class MarkAttendanceUseCase implements UseCase<void, MarkAttendanceParams> {
 
   @override
   Future<Either<Failure, void>> call(MarkAttendanceParams params) async {
+    print(
+      '[USE CASE] Mark attendance called with params: lectureId=${params.lectureId}, studentId=${params.studentId}',
+    );
     return await repository.markAttendance(
       params.lectureId,
       params.studentId,
