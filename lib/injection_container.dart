@@ -1,11 +1,13 @@
 import 'package:get_it/get_it.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/network/api_client.dart';
 import 'core/network/auth_interceptor.dart';
 import 'core/constants/constants.dart';
 import 'core/services/device_info_service.dart';
+import 'core/services/url_config_service.dart';
 
 // Auth
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
@@ -100,11 +102,16 @@ Future<void> init() async {
   );
 
   //! Core
+  sl.registerLazySingleton(() => UrlConfigService(sl()));
   sl.registerLazySingleton(() => DeviceInfoService());
   sl.registerLazySingleton(() => ApiClient(dio: sl()));
   sl.registerLazySingleton(() => AuthInterceptor(authLocalDataSource: sl()));
 
   //! External
+  // Register SharedPreferences first (async)
+  final sharedPreferences = await SharedPreferences.getInstance();
+  sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
+
   sl.registerLazySingleton(() {
     final dio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
     dio.interceptors.add(sl<AuthInterceptor>());
