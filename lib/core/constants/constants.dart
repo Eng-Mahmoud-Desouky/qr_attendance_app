@@ -16,8 +16,6 @@ class ApiConstants {
   static const String loginEndpoint = '/api/v1/auth/login';
   static const String markAttendanceEndpoint =
       '/api/v1/attendance/mark-present';
-  static const String developMarkAttendanceEndpoint =
-      '/api/v1/attendance/develop-mark-present';
   static const String historyEndpoint =
       '/api/v1/attendance/find-student-history';
   static const String profileEndpoint = '/api/v1/member/me';

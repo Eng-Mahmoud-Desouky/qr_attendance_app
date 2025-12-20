@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../domain/usecases/mark_attendance_usecase.dart';
-import '../../domain/usecases/develop_mark_presence_usecase.dart';
 
 abstract class MarkAttendanceState extends Equatable {
   @override
@@ -30,12 +29,9 @@ class MarkAttendanceFailure extends MarkAttendanceState {
 
 class MarkAttendanceCubit extends Cubit<MarkAttendanceState> {
   final MarkAttendanceUseCase markAttendanceUseCase;
-  final DevelopMarkPresenceUseCase developMarkPresenceUseCase;
 
-  MarkAttendanceCubit({
-    required this.markAttendanceUseCase,
-    required this.developMarkPresenceUseCase,
-  }) : super(MarkAttendanceInitial());
+  MarkAttendanceCubit({required this.markAttendanceUseCase})
+    : super(MarkAttendanceInitial());
 
   Future<void> markAttendance(
     String lectureId,
@@ -63,40 +59,6 @@ class MarkAttendanceCubit extends Cubit<MarkAttendanceState> {
       (_) {
         print('[CUBIT] Mark attendance SUCCESS');
         return emit(MarkAttendanceSuccess());
-      },
-    );
-  }
-
-  Future<void> developMarkPresence(
-    String lectureId,
-    String studentId,
-    String qrCodeId,
-  ) async {
-    print(
-      '[CUBIT] Develop mark presence triggered: lectureId=$lectureId, studentId=$studentId, qrCodeId=$qrCodeId',
-    );
-    emit(MarkAttendanceLoading());
-    final result = await developMarkPresenceUseCase(
-      lectureId,
-      studentId,
-      qrCodeId,
-    );
-    result.fold(
-      (failure) {
-        print('[CUBIT] Develop mark presence FAILED: ${failure.message}');
-        return emit(MarkAttendanceFailure(failure.message));
-      },
-      (success) {
-        print('[CUBIT] Develop mark presence result: $success');
-        if (success) {
-          return emit(
-            MarkAttendanceSuccess(message: 'تم تسجيل حضورك للمحاضرة بنجاح! ✅'),
-          );
-        } else {
-          return emit(
-            MarkAttendanceFailure('فشل تسجيل الحضور. يرجى المحاولة مرة أخرى.'),
-          );
-        }
       },
     );
   }

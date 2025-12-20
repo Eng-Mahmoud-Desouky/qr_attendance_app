@@ -22,7 +22,6 @@ import 'features/attendance/data/datasources/attendance_remote_data_source.dart'
 import 'features/attendance/data/repositories/attendance_repository_impl.dart';
 import 'features/attendance/domain/repositories/attendance_repository.dart';
 import 'features/attendance/domain/usecases/mark_attendance_usecase.dart';
-import 'features/attendance/domain/usecases/develop_mark_presence_usecase.dart';
 import 'features/attendance/domain/usecases/get_attendance_history_usecase.dart';
 import 'features/attendance/presentation/cubit/mark_attendance_cubit.dart';
 import 'features/attendance/presentation/cubit/attendance_history_cubit.dart';
@@ -61,17 +60,12 @@ Future<void> init() async {
 
   //! Features - Attendance
   // Cubit
-  sl.registerFactory(
-    () => MarkAttendanceCubit(
-      markAttendanceUseCase: sl(),
-      developMarkPresenceUseCase: sl(),
-    ),
-  );
+  sl.registerFactory(() => MarkAttendanceCubit(markAttendanceUseCase: sl()));
   sl.registerFactory(() => AttendanceHistoryCubit(getHistoryUseCase: sl()));
 
   // Use cases
   sl.registerLazySingleton(() => MarkAttendanceUseCase(sl()));
-  sl.registerLazySingleton(() => DevelopMarkPresenceUseCase(sl()));
+
   sl.registerLazySingleton(() => GetAttendanceHistoryUseCase(sl()));
 
   // Repository
@@ -103,7 +97,7 @@ Future<void> init() async {
 
   //! Core
   sl.registerLazySingleton(() => UrlConfigService(sl()));
-  sl.registerLazySingleton(() => DeviceInfoService());
+  sl.registerLazySingleton(() => DeviceInfoService(preferences: sl()));
   sl.registerLazySingleton(() => ApiClient(dio: sl()));
   sl.registerLazySingleton(() => AuthInterceptor(authLocalDataSource: sl()));
 
@@ -113,7 +107,20 @@ Future<void> init() async {
   sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
 
   sl.registerLazySingleton(() {
-    final dio = Dio(BaseOptions(baseUrl: ApiConstants.baseUrl));
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        // Timeouts for mobile data connections
+        connectTimeout: const Duration(seconds: 30), // وقت الاتصال بالسيرفر
+        receiveTimeout: const Duration(seconds: 30), // وقت استقبال البيانات
+        sendTimeout: const Duration(seconds: 30), // وقت إرسال البيانات
+        // Headers
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
     dio.interceptors.add(sl<AuthInterceptor>());
     return dio;
   });

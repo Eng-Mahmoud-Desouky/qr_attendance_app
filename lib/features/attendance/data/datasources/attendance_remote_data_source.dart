@@ -14,12 +14,6 @@ abstract class AttendanceRemoteDataSource {
     DateTime timestamp,
   );
 
-  Future<bool> developMarkPresence(
-    String lectureId,
-    String studentId,
-    String qrCodeId,
-  );
-
   Future<List<AttendanceRecordModel>> getHistory(
     String studentId,
     int limit,
@@ -65,9 +59,9 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
         throw ServerException('Missing uuidTokenHash in QR code');
       }
 
-      // Get device information
+      // Get device information (Public IP + Persistent Device ID)
       final ipAddress = await deviceInfoService.getIpAddress();
-      final deviceId = await deviceInfoService.getDeviceId();
+      final deviceId = await deviceInfoService.getOrCreateDeviceId();
 
       print('');
       print('═══════════════════════════════════════════════════');
@@ -88,33 +82,41 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
       print('   └─ Lecture ID: $lectureId');
       print('═══════════════════════════════════════════════════');
 
-      // Prepare request body according to API specification
+      // Prepare request body according to API specification (Flat structure)
       final requestData = {
-        "requestAttendance": {
-          "ipAddress": ipAddress,
-          "deviceId": deviceId,
-          "lectureId": lectureId,
-          "qrCodeId": qrCodeId,
-          "studentAcademicMemberId": studentId,
-        },
-        "requestQrGenerator": {
-          "qrCodeId": qrCodeId,
-          "uuidTokenHash": uuidTokenHash,
-        },
+        "ipAddress": ipAddress,
+        "deviceId": deviceId,
+        "lectureId": lectureId,
+        "qrCodeId": qrCodeId,
+        "studentAcademicMemberId": studentId,
+        "uuidTokenHash": uuidTokenHash,
       };
 
       print('📦 Complete Request Body:');
       print(const JsonEncoder.withIndent('  ').convert(requestData));
       print('═══════════════════════════════════════════════════');
+
+      // Validate data before sending
+      print('🔍 Validating request data...');
+      if (ipAddress.isEmpty || ipAddress == '0.0.0.0') {
+        print('⚠️  WARNING: IP Address is default/empty: $ipAddress');
+      }
+      if (deviceId.isEmpty) {
+        throw ServerException('Device ID is empty - cannot mark attendance');
+      }
+      if (lectureId.isEmpty) {
+        throw ServerException('Lecture ID is empty - cannot mark attendance');
+      }
+      if (studentId.isEmpty) {
+        throw ServerException('Student ID is empty - cannot mark attendance');
+      }
+      print('✅ All required fields are present');
+
       print('🚀 Sending request...');
       print('');
 
-      // Make API request with query parameters
-      await client.put(
-        ApiConstants.markAttendanceEndpoint,
-        queryParameters: {'studentId': studentId, 'lectureId': lectureId},
-        data: requestData,
-      );
+      // Make API request (data is in body, no query params needed)
+      await client.put(ApiConstants.markAttendanceEndpoint, data: requestData);
 
       print('');
       print('═══════════════════════════════════════════════════');
@@ -145,80 +147,6 @@ class AttendanceRemoteDataSourceImpl implements AttendanceRemoteDataSource {
       rethrow;
     } catch (e) {
       print('[ATTENDANCE] ✗ Unexpected error: $e');
-      throw ServerException('Failed to mark attendance: $e');
-    }
-  }
-
-  @override
-  Future<bool> developMarkPresence(
-    String lectureId,
-    String studentId,
-    String qrCodeId,
-  ) async {
-    try {
-      print('');
-      print('═══════════════════════════════════════════════════');
-      print('📤 [DEVELOP ATTENDANCE] Mark Presence Request');
-      print('═══════════════════════════════════════════════════');
-      print('🎯 Request Information:');
-      print('   ├─ Endpoint: ${ApiConstants.developMarkAttendanceEndpoint}');
-      print('   ├─ Method: PUT');
-      print('   ├─ Lecture ID: $lectureId');
-      print('   ├─ Student ID: $studentId');
-      print('   └─ QR Code ID: $qrCodeId');
-      print('═══════════════════════════════════════════════════');
-      print('🚀 Sending request...');
-      print('');
-
-      // Make PUT request with query parameters
-      final response = await client.put(
-        ApiConstants.developMarkAttendanceEndpoint,
-        queryParameters: {
-          'lectureId': lectureId,
-          'studentId': studentId,
-          'qrCodeId': qrCodeId,
-        },
-      );
-
-      // Extract boolean result from response
-      final bool result = response.data as bool;
-
-      print('');
-      print('═══════════════════════════════════════════════════');
-      if (result) {
-        print('✅ [DEVELOP ATTENDANCE] Success! Attendance Marked');
-      } else {
-        print('❌ [DEVELOP ATTENDANCE] Failed to mark attendance');
-      }
-      print('   └─ Result: $result');
-      print('═══════════════════════════════════════════════════');
-      print('');
-
-      return result;
-    } on DioException catch (e) {
-      print('[DEVELOP ATTENDANCE] ✗ DioException occurred:');
-      print('[DEVELOP ATTENDANCE]   Status code: ${e.response?.statusCode}');
-      print('[DEVELOP ATTENDANCE]   Response data: ${e.response?.data}');
-      print('[DEVELOP ATTENDANCE]   Error message: ${e.message}');
-
-      // Handle specific error codes
-      if (e.response?.statusCode == 400) {
-        throw ServerException('Invalid QR code or expired');
-      } else if (e.response?.statusCode == 401) {
-        throw ServerException('Authentication failed. Please login again.');
-      } else if (e.response?.statusCode == 409) {
-        throw ServerException('Attendance already marked for this lecture');
-      } else if (e.response?.statusCode == 404) {
-        throw ServerException('QR code or lecture not found');
-      }
-
-      throw ServerException(
-        e.response?.data['message'] ?? e.message ?? 'Unknown error',
-      );
-    } on ServerException {
-      rethrow;
-    } catch (e) {
-      print('[DEVELOP ATTENDANCE] ✗ Unexpected error: $e');
       throw ServerException('Failed to mark attendance: $e');
     }
   }

@@ -33,26 +33,6 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   }
 
   @override
-  Future<Either<Failure, bool>> developMarkPresence(
-    String lectureId,
-    String studentId,
-    String qrCodeId,
-  ) async {
-    try {
-      final result = await remoteDataSource.developMarkPresence(
-        lectureId,
-        studentId,
-        qrCodeId,
-      );
-      return Right(result);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
   Future<Either<Failure, List<AttendanceRecord>>> getAttendanceHistory(
     String studentId,
     int limit,

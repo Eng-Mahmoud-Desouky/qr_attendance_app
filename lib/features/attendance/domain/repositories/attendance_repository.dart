@@ -10,12 +10,6 @@ abstract class AttendanceRepository {
     DateTime timestamp,
   );
 
-  Future<Either<Failure, bool>> developMarkPresence(
-    String lectureId,
-    String studentId,
-    String qrCodeId,
-  );
-
   Future<Either<Failure, List<AttendanceRecord>>> getAttendanceHistory(
     String studentId,
     int limit,

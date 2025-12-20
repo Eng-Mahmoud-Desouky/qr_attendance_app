@@ -215,13 +215,15 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     );
                   }
 
-                  print('🚀 Calling Develop Mark Presence API...');
+                  print('🚀 Calling Mark Attendance API...');
                   print('');
 
-                  context.read<MarkAttendanceCubit>().developMarkPresence(
+                  // Call the standard mark attendance method with full QR code JSON
+                  context.read<MarkAttendanceCubit>().markAttendance(
                     lectureId,
                     studentId,
-                    qrCodeId,
+                    rawCode, // Pass the entire QR code JSON string
+                    DateTime.now(),
                   );
                   break;
                 } catch (e) {

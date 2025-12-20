@@ -30,6 +30,27 @@ class ApiClient {
           print('[API CLIENT] 📍 Endpoint: ${error.requestOptions.path}');
           print('[API CLIENT] 📊 Status Code: ${error.response?.statusCode}');
           print('[API CLIENT] 📄 Response: ${error.response?.data}');
+
+          // Log connection type errors
+          if (error.type == DioExceptionType.connectionTimeout) {
+            print(
+              '[API CLIENT] ⏱️ CONNECTION TIMEOUT - Check internet connection or server availability',
+            );
+          } else if (error.type == DioExceptionType.receiveTimeout) {
+            print(
+              '[API CLIENT] ⏱️ RECEIVE TIMEOUT - Server is slow to respond',
+            );
+          } else if (error.type == DioExceptionType.sendTimeout) {
+            print('[API CLIENT] ⏱️ SEND TIMEOUT - Upload is taking too long');
+          } else if (error.type == DioExceptionType.connectionError) {
+            print(
+              '[API CLIENT] 🌐 CONNECTION ERROR - No internet or server unreachable',
+            );
+            print(
+              '[API CLIENT] 💡 TIP: Check if you are on mobile data and server IP is accessible',
+            );
+          }
+
           return handler.next(error);
         },
       ),
